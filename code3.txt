@@ -1,0 +1,100 @@
+package com.example.emailandpasswordex2
+
+import android.content.Intent
+import android.os.Bundle
+import android.text.TextUtils
+import android.view.View
+import android.widget.SearchView
+import androidx.activity.enableEdgeToEdge
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.emailandpasswordex2.databinding.ActivityMain3Binding
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.firestore.DocumentChange
+import com.google.firebase.firestore.EventListener
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreException
+import com.google.firebase.firestore.QuerySnapshot
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
+import com.google.firebase.ktx.app
+
+class MainActivity3 : AppCompatActivity(), onClick {
+    private lateinit var binding: ActivityMain3Binding
+    private lateinit var adapter: CarsAdapter
+    private lateinit var carsArrayList: ArrayList<Cars>
+    private lateinit var firestore: FirebaseFirestore
+    private lateinit var filteredList: ArrayList<Cars>
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        binding = ActivityMain3Binding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        val recyclerView = binding.carslistview
+        recyclerView.layoutManager = LinearLayoutManager(this)
+        carsArrayList = arrayListOf()
+        filteredList = arrayListOf()
+
+        adapter = CarsAdapter(filteredList, this, this)
+        recyclerView.adapter=adapter
+
+        binding.searchview.setOnQueryTextListener(object :SearchView.OnQueryTextListener{
+
+            override fun onQueryTextSubmit(query: String?): Boolean {
+                return false
+            }
+
+            override fun onQueryTextChange(newText: String?): Boolean {
+                val filterData=if (!TextUtils.isEmpty(newText)){
+                    carsArrayList.filter {
+                        it.title!!.contains(newText!!,ignoreCase = true)
+                    }
+                }
+                else{
+                    carsArrayList
+                }
+                filteredList.clear()
+                filteredList.addAll(filterData)
+                adapter.notifyDataSetChanged()
+                return true
+
+                }
+            })
+        firestore=Firebase.firestore
+        firestore.collection("Cars").addSnapshotListener(object :EventListener<QuerySnapshot>{
+            override fun onEvent(value: QuerySnapshot?, error: FirebaseFirestoreException?) {
+                if (error!=null){
+                    return
+                }
+                for(dc:DocumentChange in value?.documentChanges!!){
+                    if (dc.type==DocumentChange.Type.ADDED){
+                        carsArrayList.add(dc.document.toObject(Cars::class.java))
+                        filteredList.add(dc.document.toObject(Cars::class.java))
+                    }
+                }
+                adapter.notifyDataSetChanged()
+                binding.prograssbar.visibility=View.INVISIBLE
+
+            }
+        })
+
+
+    }
+        override fun onclick(cars: Cars) {
+            val i=Intent(this,MainActivity4::class.java)
+            i.putExtra("title",cars.title)
+            i.putExtra("model",cars.model)
+            i.putExtra("img",cars.img)
+            i.putExtra("isBought",cars.isBought)
+            i.putExtra("colour",cars.colour)
+            i.putExtra("des",cars.des)
+            i.putExtra("price",cars.price)
+            startActivity(i)
+
+
+
+    }
+}
